@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Zodiotac AI</title>
+    <title>Zodiotac AI - 24/7 Edition</title>
     <style>
         * { box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #121212; color: white; margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; }
@@ -20,7 +20,7 @@
 <body>
 
     <div id="chatbox">
-        <div class="message ai-msg">Hello! I am Zodiotac AI, built completely from scratch using PyTorch. Ask me something!</div>
+        <div class="message ai-msg">Hello! I am Zodiotac. My dual-server 24/7 architecture is online.</div>
     </div>
 
     <div id="input-area">
@@ -29,11 +29,21 @@
     </div>
 
     <script>
-        // REPLACE THIS WITH YOUR CLOUDFLARE URL FROM COLAB
-        const AI_API_URL = "https://forecast-sole-brief-generations.trycloudflare.com/chat";
+        // PASTE YOUR TWO CLOUDFLARE LINKS HERE
+        const URL_SHIFT_1 = "https://LINK-1.trycloudflare.com/chat";
+        const URL_SHIFT_2 = "https://LINK-2.trycloudflare.com/chat";
 
         function handleKeyPress(e) {
             if (e.key === 'Enter') sendMessage();
+        }
+
+        // Custom fetch function that times out if the server is dead
+        async function fetchWithTimeout(url, options, timeout = 6000) {
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), timeout);
+            const response = await fetch(url, { ...options, signal: controller.signal });
+            clearTimeout(id);
+            return response;
         }
 
         async function sendMessage() {
@@ -44,16 +54,28 @@
             addMessage(message, 'user-msg');
             input.value = '';
 
+            const requestOptions = {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: message })
+            };
+
             try {
-                const response = await fetch(AI_API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: message })
-                });
-                const data = await response.json();
+                // Try the first server
+                let response = await fetchWithTimeout(URL_SHIFT_1, requestOptions);
+                if (!response.ok) throw new Error("Server 1 failed");
+                let data = await response.json();
                 addMessage(data.reply, 'ai-msg');
-            } catch (error) {
-                addMessage("⚠️ Couldn't connect to Colab backend. Make sure your notebook is running!", 'ai-msg');
+            } catch (error1) {
+                console.log("Shift 1 is offline. Rerouting to Shift 2...");
+                try {
+                    // Failover to the second server
+                    let response2 = await fetchWithTimeout(URL_SHIFT_2, requestOptions);
+                    let data2 = await response2.json();
+                    addMessage(data2.reply, 'ai-msg');
+                } catch (error2) {
+                    addMessage("⚠️ Both Colab shifts are currently offline. Please restart a notebook.", 'ai-msg');
+                }
             }
         }
 
