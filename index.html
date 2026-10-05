@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Zodiotac AI</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #121212; color: white; margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; }
+        #chatbox { flex: 1; padding: 20px; overflow-y: auto; }
+        .message { margin-bottom: 15px; padding: 10px; border-radius: 8px; max-width: 80%; word-wrap: break-word; }
+        .user-msg { background-color: #0b93f6; align-self: flex-end; margin-left: auto; }
+        .ai-msg { background-color: #333333; align-self: flex-start; }
+        #input-area { display: flex; padding: 10px; background-color: #1e1e1e; }
+        input { flex: 1; padding: 12px; border: none; border-radius: 20px; outline: none; background: #333; color: white; }
+        button { padding: 12px 20px; margin-left: 10px; background-color: #0b93f6; color: white; border: none; border-radius: 20px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div id="chatbox">
+        <div class="message ai-msg">Hello! I am your Zodiotac AI. Send me a message!</div>
+    </div>
+
+    <div id="input-area">
+        <input type="text" id="userInput" placeholder="Type a message...">
+        <button onclick="sendMessage()">Send</button>
+    </div>
+
+    <script>
+        // REPLACE THIS URL with the Ngrok URL you get from Google Colab later!
+        const AI_API_URL = "https://YOUR-NGROK-URL.ngrok-free.app/chat"; 
+
+        async function sendMessage() {
+            const input = document.getElementById('userInput');
+            const message = input.value.trim();
+            if (!message) return;
+
+            addMessage(message, 'user-msg');
+            input.value = '';
+
+            try {
+                const response = await fetch(AI_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: message })
+                });
+                const data = await response.json();
+                addMessage(data.reply, 'ai-msg');
+            } catch (error) {
+                addMessage("Error connecting to AI backend. Make sure Colab is running!", 'ai-msg');
+            }
+        }
+
+        function addMessage(text, className) {
+            const chatbox = document.getElementById('chatbox');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${className}`;
+            msgDiv.innerText = text;
+            chatbox.appendChild(msgDiv);
+            chatbox.scrollTop = chatbox.scrollHeight;
+        }
+    </script>
+</body>
+</html>
