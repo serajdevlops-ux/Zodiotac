@@ -6,7 +6,7 @@
     <content src="index.html" />
 
     <platform name="android">
-        <!-- Uses icon.svg directly as the app icon for Android -->
-        <icon src="icon.svg" />
+        <!-- Point to the generated vector icon -->
+        <icon src="icon.xml" />
     </platform>
 </widget>
