@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build HTML to APK
 
 on:
   push:
@@ -12,8 +12,10 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
 
-    - name: Debug - List Repository Files
-      run: ls -la
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
 
     - name: Set up Java JDK
       uses: actions/setup-java@v4
@@ -21,20 +23,25 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: Set up Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        flutter-version: '3.x'
-        channel: 'stable'
+    - name: Install Cordova
+      run: npm install -g cordova
 
-    - name: Install Dependencies
-      run: flutter pub get
-
-    - name: Build Release APK
-      run: flutter build apk --release
+    - name: Create App & Build APK
+      run: |
+        # Create a blank Cordova project
+        cordova create zodiotac_app com.zodiotac.app Zodiotac
+        
+        # Remove default Cordova HTML and copy your custom index.html
+        rm -rf zodiotac_app/www/*
+        cp index.html zodiotac_app/www/
+        
+        # Add Android platform and build
+        cd zodiotac_app
+        cordova platform add android
+        cordova build android
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: app-release-apk
-        path: build/app/outputs/flutter-apk/app-release.apk
+        name: zodiotac-app-apk
+        path: zodiotac_app/platforms/android/app/build/outputs/apk/debug/app-debug.apk
