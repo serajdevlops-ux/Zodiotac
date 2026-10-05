@@ -28,14 +28,9 @@ jobs:
 
     - name: Create App & Build APK
       run: |
-        # Create a blank Cordova project
         cordova create zodiotac_app com.zodiotac.app Zodiotac
-        
-        # Remove default Cordova HTML and copy your custom index.html
         rm -rf zodiotac_app/www/*
         cp index.html zodiotac_app/www/
-        
-        # Add Android platform and build
         cd zodiotac_app
         cordova platform add android
         cordova build android
