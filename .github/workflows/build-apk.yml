@@ -28,9 +28,16 @@ jobs:
 
     - name: Create App & Build APK
       run: |
+        # 1. Create Cordova project
         cordova create zodiotac_app com.zodiotac.app Zodiotac
+        
+        # 2. Copy web assets, icon, and config into Cordova project
         rm -rf zodiotac_app/www/*
         cp index.html zodiotac_app/www/
+        cp icon.svg zodiotac_app/
+        cp config.xml zodiotac_app/
+        
+        # 3. Add Android platform and build
         cd zodiotac_app
         cordova platform add android
         cordova build android
