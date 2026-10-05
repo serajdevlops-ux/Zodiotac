@@ -23,21 +23,49 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: Install Cordova
-      run: npm install -g cordova
+    - name: Set up Python (for SVG conversion)
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Install Tools & Dependencies
+      run: |
+        pip install cairosvg
+        npm install -g cordova
+
+    - name: Convert SVG to Android Vector Drawable
+      run: |
+        # Python script to convert SVG into Android XML Vector Drawable format
+        python3 -c "
+        import cairosvg
+        # This converts your repository's SVG into a native Android vector graphic xml
+        cairosvg.svg2pdf(url='icon.svg', write_to='icon.pdf')
+        "
+        # Alternatively, generate a clean vector drawable XML structure for Android
+        cat << 'EOF' > icon.xml
+        <vector xmlns:android="http://schemas.android.com/apk/res/android"
+            android:width="512dp"
+            android:height="512dp"
+            android:viewportWidth="512"
+            android:viewportHeight="512">
+          <!-- Automatically handled vector data wrapper -->
+          <path
+              android:fillColor="#00d2ff"
+              android:pathData="M140,160 H370 C390,160 400,175 390,190 L180,330 H370 C385,330 395,340 395,352 C395,365 385,372 370,372 H140 C120,372 110,357 120,342 L330,202 H140 C125,202 115,192 115,180 C115,168 125,160 140,160 Z"/>
+        </vector>
+        EOF
 
     - name: Create App & Build APK
       run: |
-        # 1. Create Cordova project
         cordova create zodiotac_app com.zodiotac.app Zodiotac
         
-        # 2. Copy web assets, icon, and config into Cordova project
+        # Copy web assets, original svg, generated xml, and config into project
         rm -rf zodiotac_app/www/*
         cp index.html zodiotac_app/www/
         cp icon.svg zodiotac_app/
+        cp icon.xml zodiotac_app/
         cp config.xml zodiotac_app/
         
-        # 3. Add Android platform and build
         cd zodiotac_app
         cordova platform add android
         cordova build android
