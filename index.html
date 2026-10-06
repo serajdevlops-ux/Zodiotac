@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Zodiotac AI - 24/7 Edition</title>
+    <title>Zodiotac AI</title>
     <style>
         * { box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #121212; color: white; margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; }
@@ -11,6 +11,14 @@
         .message { padding: 12px 16px; border-radius: 12px; max-width: 80%; word-wrap: break-word; line-height: 1.4; }
         .user-msg { background-color: #0b93f6; align-self: flex-end; border-bottom-right-radius: 2px; }
         .ai-msg { background-color: #2c2c2e; align-self: flex-start; border-bottom-left-radius: 2px; }
+        
+        /* Thinking animation bubble */
+        .typing-indicator { display: flex; align-items: center; gap: 4px; padding: 12px 16px; background-color: #2c2c2e; align-self: flex-start; border-radius: 12px; border-bottom-left-radius: 2px; }
+        .typing-dot { width: 8px; height: 8px; background-color: #8e8e93; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1.0); } }
+
         #input-area { display: flex; padding: 12px; background-color: #1c1c1e; border-top: 1px solid #2c2c2e; }
         input { flex: 1; padding: 12px 16px; border: none; border-radius: 20px; outline: none; background: #2c2c2e; color: white; font-size: 16px; }
         button { padding: 12px 20px; margin-left: 10px; background-color: #0b93f6; color: white; border: none; border-radius: 20px; font-weight: bold; cursor: pointer; }
@@ -20,7 +28,7 @@
 <body>
 
     <div id="chatbox">
-        <div class="message ai-msg">Hello! I am Zodiotac. My dual-server 24/7 architecture is online.</div>
+        <div class="message ai-msg">Hello! I am Zodiotac, powered by Llama 3. Ask me anything!</div>
     </div>
 
     <div id="input-area">
@@ -29,15 +37,14 @@
     </div>
 
     <script>
-        // PASTE YOUR TWO CLOUDFLARE LINKS HERE
-        const URL_SHIFT_1 = "https://try-watt-impaired-intl.trycloudflare.com/chat";
-        const URL_SHIFT_2 = "https://mount-heart-thinking-experts.trycloudflare.com/chat";
+        // PASTE YOUR CLOUDFLARE LINKS HERE (Supports Failover shift 1 and 2)
+        const URL_SHIFT_1 = "https://specially-white-races-shoe.trycloudflare.com/chat";
+        const URL_SHIFT_2 = "https://districts-stood-cgi-ray.trycloudflare.com/chat";
 
         function handleKeyPress(e) {
             if (e.key === 'Enter') sendMessage();
         }
 
-        // Custom fetch function that times out if the server is dead
         async function fetchWithTimeout(url, options, timeout = 6000) {
             const controller = new AbortController();
             const id = setTimeout(() => controller.abort(), timeout);
@@ -54,29 +61,34 @@
             addMessage(message, 'user-msg');
             input.value = '';
 
+            // Show thinking animation
+            const typingId = showTypingIndicator();
+
             const requestOptions = {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ text: message })
             };
 
+            let replyText = "⚠️ Both Colab servers are offline.";
             try {
-                // Try the first server
                 let response = await fetchWithTimeout(URL_SHIFT_1, requestOptions);
-                if (!response.ok) throw new Error("Server 1 failed");
+                if (!response.ok) throw new Error();
                 let data = await response.json();
-                addMessage(data.reply, 'ai-msg');
-            } catch (error1) {
-                console.log("Shift 1 is offline. Rerouting to Shift 2...");
+                replyText = data.reply;
+            } catch (e1) {
                 try {
-                    // Failover to the second server
                     let response2 = await fetchWithTimeout(URL_SHIFT_2, requestOptions);
                     let data2 = await response2.json();
-                    addMessage(data2.reply, 'ai-msg');
-                } catch (error2) {
-                    addMessage("⚠️ Both Colab shifts are currently offline. Please restart a notebook.", 'ai-msg');
+                    replyText = data2.reply;
+                } catch (e2) {
+                    replyText = "⚠️ Could not reach Colab backends. Check if notebooks are active.";
                 }
             }
+
+            // Remove typing indicator and add final response
+            removeTypingIndicator(typingId);
+            addMessage(replyText, 'ai-msg');
         }
 
         function addMessage(text, className) {
@@ -86,6 +98,22 @@
             msgDiv.innerText = text;
             chatbox.appendChild(msgDiv);
             chatbox.scrollTop = chatbox.scrollHeight;
+        }
+
+        function showTypingIndicator() {
+            const chatbox = document.getElementById('chatbox');
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'typing-indicator';
+            typingDiv.id = 'typing-' + Date.now();
+            typingDiv.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
+            chatbox.appendChild(typingDiv);
+            chatbox.scrollTop = chatbox.scrollHeight;
+            return typingDiv.id;
+        }
+
+        function removeTypingIndicator(id) {
+            const element = document.getElementById(id);
+            if (element) element.remove();
         }
     </script>
 </body>
