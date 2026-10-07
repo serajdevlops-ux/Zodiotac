@@ -1,12 +1,9 @@
-<?xml version='1.0' encoding='utf-8'?>
-<widget id="com.zodiotac.app" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
-    <name>Zodiotac</name>
-    <description>Zodiotac AI Assistant</description>
-    <author email="dev@zodiotac.com" href="https://github.com">Zodiotac Developer</author>
-    <content src="index.html" />
-
-    <platform name="android">
-        <!-- Point to the generated vector icon -->
-        <icon src="icon.xml" />
-    </platform>
-</widget>
+<platform name="android">
+    <!-- Standard Android App Icon Configuration -->
+    <icon src="resources/icon.svg" density="ldpi" />
+    <icon src="resources/icon.svg" density="mdpi" />
+    <icon src="resources/icon.svg" density="hdpi" />
+    <icon src="resources/icon.svg" density="xhdpi" />
+    <icon src="resources/icon.svg" density="xxhdpi" />
+    <icon src="resources/icon.svg" density="xxxhdpi" />
+</platform>
