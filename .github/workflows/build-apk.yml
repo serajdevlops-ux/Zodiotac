@@ -2,7 +2,8 @@ name: Build HTML to APK
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -12,66 +13,73 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
 
-    - name: Setup Node.js
+    - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '18'
+        cache: 'npm'
 
-    - name: Set up Java JDK
+    - name: Set up Java (JDK 17)
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: Set up Python (for SVG conversion)
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
-
-    - name: Install Tools & Dependencies
+    - name: Install Cordova & Native Dependencies
       run: |
-        pip install cairosvg
         npm install -g cordova
 
-    - name: Convert SVG to Android Vector Drawable
+    - name: Create Clean Cordova Project
       run: |
-        # Python script to convert SVG into Android XML Vector Drawable format
-        python3 -c "
-        import cairosvg
-        # This converts your repository's SVG into a native Android vector graphic xml
-        cairosvg.svg2pdf(url='icon.svg', write_to='icon.pdf')
-        "
-        # Alternatively, generate a clean vector drawable XML structure for Android
-        cat << 'EOF' > icon.xml
-        <vector xmlns:android="http://schemas.android.com/apk/res/android"
-            android:width="512dp"
-            android:height="512dp"
-            android:viewportWidth="512"
-            android:viewportHeight="512">
-          <!-- Automatically handled vector data wrapper -->
-          <path
-              android:fillColor="#00d2ff"
-              android:pathData="M140,160 H370 C390,160 400,175 390,190 L180,330 H370 C385,330 395,340 395,352 C395,365 385,372 370,372 H140 C120,372 110,357 120,342 L330,202 H140 C125,202 115,192 115,180 C115,168 125,160 140,160 Z"/>
-        </vector>
+        # Create project in a temporary workspace folder to avoid structure conflicts
+        cordova create temp_app com.zodiotac.app Zodiotac
+        cd temp_app
+        
+        # Add Android platform
+        cordova platform add android@12.0.1
+
+    - name: Inject Custom App Files & SVG Icon
+      run: |
+        cd temp_app
+        
+        # Replace default www contents with your custom Zodiotac app files
+        rm -rf www/*
+        cp ../index.html www/index.html
+        
+        # Ensure resources directory exists
+        mkdir -p resources
+        
+        # If you saved your icon as icon.svg in your repo root, copy it over. 
+        # (Falls back gracefully if you name it icon.svg in your repo root)
+        if [ -f ../icon.svg ]; then
+          cp ../icon.svg resources/icon.svg
+        fi
+
+        # Dynamically inject clean config.xml with correct <widget> root and SVG icon support
+        cat << 'EOF' > config.xml
+        <?xml version='1.0' encoding='utf-8'?>
+        <widget id="com.zodiotac.app" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+            <name>Zodiotac</name>
+            <description>Zodiotac AI Mobile Application</description>
+            <author email="dev@zodiotac.internal" href="https://zodiotac.internal">Zodiotac Team</author>
+            <content src="index.html" />
+            <access origin="*" />
+            <allow-intent href="http://*/*" />
+            <allow-intent href="https://*/*" />
+            <platform name="android">
+                <allow-intent href="market:/*" />
+                <icon src="resources/icon.svg" />
+            </platform>
+        </widget>
         EOF
 
-    - name: Create App & Build APK
+    - name: Build Android Release APK
       run: |
-        cordova create zodiotac_app com.zodiotac.app Zodiotac
-        
-        # Copy web assets, original svg, generated xml, and config into project
-        rm -rf zodiotac_app/www/*
-        cp index.html zodiotac_app/www/
-        cp icon.svg zodiotac_app/
-        cp icon.xml zodiotac_app/
-        cp config.xml zodiotac_app/
-        
-        cd zodiotac_app
-        cordova platform add android
-        cordova build android
+        cd temp_app
+        cordova build android --release
 
-    - name: Upload APK Artifact
+    - name: Upload Built APK Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: zodiotac-app-apk
-        path: zodiotac_app/platforms/android/app/build/outputs/apk/debug/app-debug.apk
+        name: Zodiotac-Release-APK
+        path: temp_app/platforms/android/app/build/outputs/apk/release/app-release-unsigned.apk
