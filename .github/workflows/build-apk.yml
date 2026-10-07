@@ -43,7 +43,7 @@ jobs:
         cd temp_app
         cordova platform add android@12.0.1
 
-    - name: Inject Custom App Files & SVG Icon
+    - name: Inject Custom App Files & Rasterize Icon
       run: |
         cd temp_app
         
@@ -54,12 +54,17 @@ jobs:
         # Ensure resources directory exists
         mkdir -p resources
         
-        # Inject SVG icon if present in repo root
+        # Install rsvg-convert to safely convert SVG to PNG
+        sudo apt-get update && sudo apt-get install -y librsvg2-bin
+        
+        # Convert the SVG to a PNG (or fallback to the JPG) so Android accepts it
         if [ -f ../icon.svg ]; then
-          cp ../icon.svg resources/icon.svg
+          rsvg-convert -w 512 -h 512 ../icon.svg -o resources/icon.png
+        elif [ -f ../1000155117.jpg ]; then
+          convert ../1000155117.jpg -resize 512x512 resources/icon.png
         fi
 
-        # Dynamically inject clean config.xml
+        # Dynamically inject clean config.xml pointing to the newly generated PNG
         cat << 'EOF' > config.xml
         <?xml version='1.0' encoding='utf-8'?>
         <widget id="com.zodiotac.app" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
@@ -72,7 +77,8 @@ jobs:
             <allow-intent href="https://*/*" />
             <platform name="android">
                 <allow-intent href="market:/*" />
-                <icon src="resources/icon.svg" />
+                <!-- Pointing strictly to the rasterized PNG to prevent AAPT2 crashes -->
+                <icon src="resources/icon.png" />
             </platform>
         </widget>
         EOF
@@ -80,7 +86,6 @@ jobs:
     - name: Build Android Release APK
       run: |
         cd temp_app
-        # Build standard unsigned APK rather than an App Bundle
         cordova build android --release -- --packageType=apk
 
     - name: Upload Built APK Artifact
