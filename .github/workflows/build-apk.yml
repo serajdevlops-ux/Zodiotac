@@ -24,10 +24,15 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: Set up Compatible Gradle Version (8.7)
+    - name: Set up Compatible Gradle Version (7.6.4)
       uses: gradle/actions/setup-gradle@v3
       with:
-        gradle-version: '8.7'
+        gradle-version: '7.6.4'
+
+    - name: Install Android Build Tools 33.0.2
+      run: |
+        yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --licenses
+        ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager "build-tools;33.0.2"
 
     - name: Install Cordova
       run: npm install -g cordova
@@ -49,6 +54,7 @@ jobs:
         # Ensure resources directory exists
         mkdir -p resources
         
+        # Inject SVG icon if it exists
         if [ -f ../icon.svg ]; then
           cp ../icon.svg resources/icon.svg
         fi
