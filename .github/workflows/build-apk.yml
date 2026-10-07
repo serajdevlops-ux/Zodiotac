@@ -24,36 +24,36 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: Install Cordova & Native Dependencies
-      run: |
-        npm install -g cordova
+    - name: Set up Compatible Gradle Version (8.7)
+      uses: gradle/actions/setup-gradle@v3
+      with:
+        gradle-version: '8.7'
+
+    - name: Install Cordova
+      run: npm install -g cordova
 
     - name: Create Clean Cordova Project
       run: |
-        # Create project in a temporary workspace folder to avoid structure conflicts
         cordova create temp_app com.zodiotac.app Zodiotac
         cd temp_app
-        
-        # Add Android platform
         cordova platform add android@12.0.1
 
     - name: Inject Custom App Files & SVG Icon
       run: |
         cd temp_app
         
-        # Replace default www contents with your custom Zodiotac app files
+        # Replace default www contents with custom app files
         rm -rf www/*
         cp ../index.html www/index.html
         
         # Ensure resources directory exists
         mkdir -p resources
         
-        # Copy icon.svg from your repo root if it exists
         if [ -f ../icon.svg ]; then
           cp ../icon.svg resources/icon.svg
         fi
 
-        # Dynamically inject clean config.xml with correct <widget> root and SVG icon support
+        # Dynamically inject clean config.xml
         cat << 'EOF' > config.xml
         <?xml version='1.0' encoding='utf-8'?>
         <widget id="com.zodiotac.app" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
