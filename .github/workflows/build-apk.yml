@@ -17,7 +17,6 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        cache: 'npm'
 
     - name: Set up Java (JDK 17)
       uses: actions/setup-java@v4
@@ -49,8 +48,7 @@ jobs:
         # Ensure resources directory exists
         mkdir -p resources
         
-        # If you saved your icon as icon.svg in your repo root, copy it over. 
-        # (Falls back gracefully if you name it icon.svg in your repo root)
+        # Copy icon.svg from your repo root if it exists
         if [ -f ../icon.svg ]; then
           cp ../icon.svg resources/icon.svg
         fi
