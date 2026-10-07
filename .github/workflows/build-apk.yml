@@ -24,13 +24,18 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
+    - name: Set up Exact Cordova-Compatible Gradle (8.1.1)
+      uses: gradle/actions/setup-gradle@v3
+      with:
+        gradle-version: '8.1.1'
+
     - name: Install Android SDK Platform 33 & Build Tools 33.0.2
       run: |
         yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --licenses
         ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager "platforms;android-33" "build-tools;33.0.2"
 
     - name: Install Cordova
-      run: npm install -g cordova
+      run: npm install -g cordova@12.0.0
 
     - name: Create Clean Cordova Project
       run: |
@@ -75,6 +80,7 @@ jobs:
     - name: Build Android Release APK
       run: |
         cd temp_app
+        # Build standard unsigned APK rather than an App Bundle
         cordova build android --release -- --packageType=apk
 
     - name: Upload Built APK Artifact
