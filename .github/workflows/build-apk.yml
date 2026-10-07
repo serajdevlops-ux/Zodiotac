@@ -57,14 +57,14 @@ jobs:
         # Install rsvg-convert to safely convert SVG to PNG
         sudo apt-get update && sudo apt-get install -y librsvg2-bin
         
-        # Convert the SVG to a PNG (or fallback to the JPG) so Android accepts it
+        # Convert SVG to PNG
         if [ -f ../icon.svg ]; then
           rsvg-convert -w 512 -h 512 ../icon.svg -o resources/icon.png
         elif [ -f ../1000155117.jpg ]; then
           convert ../1000155117.jpg -resize 512x512 resources/icon.png
         fi
 
-        # Dynamically inject clean config.xml pointing to the newly generated PNG
+        # Dynamically inject clean config.xml
         cat << 'EOF' > config.xml
         <?xml version='1.0' encoding='utf-8'?>
         <widget id="com.zodiotac.app" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
@@ -77,19 +77,31 @@ jobs:
             <allow-intent href="https://*/*" />
             <platform name="android">
                 <allow-intent href="market:/*" />
-                <!-- Pointing strictly to the rasterized PNG to prevent AAPT2 crashes -->
                 <icon src="resources/icon.png" />
             </platform>
         </widget>
         EOF
 
-    - name: Build Android Release APK
+    - name: Build Android Unsigned APK
       run: |
         cd temp_app
         cordova build android --release -- --packageType=apk
+
+    - name: Align and Sign APK
+      run: |
+        cd temp_app/platforms/android/app/build/outputs/apk/release
+        
+        # 1. Generate throwaway keystore
+        keytool -genkey -v -keystore release.keystore -alias zodiotac -keyalg RSA -keysize 2048 -validity 10000 -storepass password -keypass password -dname "CN=Zodiotac, OU=Dev, O=Zodiotac, L=City, S=State, C=US"
+        
+        # 2. Align the APK
+        ${ANDROID_HOME}/build-tools/33.0.2/zipalign -v 4 app-release-unsigned.apk Zodiotac-Release.apk
+        
+        # 3. Sign the APK with v2/v3 signatures
+        ${ANDROID_HOME}/build-tools/33.0.2/apksigner sign --ks release.keystore --ks-pass pass:password --key-pass pass:password Zodiotac-Release.apk
 
     - name: Upload Built APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: Zodiotac-Release-APK
-        path: temp_app/platforms/android/app/build/outputs/apk/release/app-release-unsigned.apk
+        path: temp_app/platforms/android/app/build/outputs/apk/release/Zodiotac-Release.apk
