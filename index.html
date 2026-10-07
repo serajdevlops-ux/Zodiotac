@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Zodiotac AI</title>
     <style>
         :root {
@@ -16,67 +16,219 @@
             --border-color: #333537;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-color); color: var(--text-primary); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        html, body { width: 100%; height: 100vh; overflow: hidden; position: fixed; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-color); color: var(--text-primary); display: flex; flex-direction: column; }
         
         /* Header */
-        header { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; background-color: var(--bg-color); border-bottom: 1px solid var(--border-color); font-size: 18px; font-weight: 500; }
-        .logo-container { display: flex; align-items: center; gap: 10px; background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 700; }
+        header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background-color: var(--bg-color); border-bottom: 1px solid var(--border-color); height: 60px; flex-shrink: 0; z-index: 10; }
+        .header-left, .header-right { display: flex; align-items: center; gap: 12px; }
+        .icon-btn { background: transparent; border: none; color: var(--text-primary); cursor: pointer; padding: 8px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .icon-btn:hover { background: var(--surface-hover); }
+        .logo-container { font-size: 18px; font-weight: 700; background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+        /* Main Layout & Sidebar */
+        .app-container { display: flex; flex: 1; overflow: hidden; position: relative; width: 100%; }
         
-        /* Chatbox */
-        #chatbox { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 24px; max-width: 800px; width: 100%; margin: 0 auto; }
+        sidebar { position: absolute; left: -280px; top: 0; width: 280px; height: 100%; background-color: var(--surface-color); border-right: 1px solid var(--border-color); transition: left 0.3s ease; z-index: 100; display: flex; flex-direction: column; padding: 16px; }
+        sidebar.open { left: 0; }
+        .sidebar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .new-chat-btn { background: var(--surface-hover); color: var(--text-primary); border: 1px solid var(--border-color); padding: 10px; border-radius: 12px; width: 100%; cursor: pointer; font-weight: 500; margin-bottom: 15px; text-align: left; }
+        .chat-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+        .chat-item { padding: 10px 12px; border-radius: 8px; background: transparent; color: var(--text-secondary); cursor: pointer; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .chat-item:hover, .chat-item.active { background: var(--surface-hover); color: var(--text-primary); }
+
+        /* Overlay for sidebar */
+        .sidebar-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; z-index: 99; }
+        .sidebar-overlay.active { display: block; }
+
+        /* Chat Area */
+        .chat-main { flex: 1; display: flex; flex-direction: column; height: 100%; width: 100%; overflow: hidden; }
+        #chatbox { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; width: 100%; max-width: 800px; margin: 0 auto; }
         
-        .message-row { display: flex; gap: 16px; width: 100%; max-width: 100%; }
+        .message-row { display: flex; gap: 12px; width: 100%; max-width: 100%; }
         .message-row.user { justify-content: flex-end; }
-        
-        .avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; flex-shrink: 0; }
+        .avatar { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold; flex-shrink: 0; }
         .ai-avatar { background: var(--accent-gradient); color: #131314; }
         
-        .message { padding: 4px 0; line-height: 1.6; font-size: 15px; word-wrap: break-word; }
-        .user-msg { background-color: var(--user-bubble); padding: 12px 18px; border-radius: 18px; max-width: 75%; border-bottom-right-radius: 4px; }
-        .ai-msg { color: var(--text-primary); max-width: calc(100% - 48px); }
+        .message { line-height: 1.5; font-size: 15px; word-break: break-word; }
+        .user-msg { background-color: var(--user-bubble); padding: 10px 16px; border-radius: 16px; max-width: 80%; border-bottom-right-radius: 4px; }
+        .ai-msg { color: var(--text-primary); max-width: calc(100% - 42px); }
 
         /* Thinking animation */
-        .typing-indicator { display: flex; align-items: center; gap: 6px; padding: 8px 0; }
-        .typing-dot { width: 8px; height: 8px; background: #8ab4f8; border-radius: 50%; animation: pulse 1.4s infinite ease-in-out both; }
+        .typing-indicator { display: flex; align-items: center; gap: 6px; padding: 6px 0; }
+        .typing-dot { width: 7px; height: 7px; background: #8ab4f8; border-radius: 50%; animation: pulse 1.4s infinite ease-in-out both; }
         .typing-dot:nth-child(2) { animation-delay: 0.2s; }
         .typing-dot:nth-child(3) { animation-delay: 0.4s; }
         @keyframes pulse { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
 
         /* Input Container */
-        #input-area-wrapper { padding: 16px; background-color: var(--bg-color); display: flex; justify-content: center; }
-        #input-container { display: flex; align-items: center; background-color: var(--surface-color); border: 1px solid var(--border-color); border-radius: 28px; padding: 8px 16px; width: 100%; max-width: 800px; }
-        input { flex: 1; background: transparent; border: none; outline: none; color: var(--text-primary); font-size: 16px; padding: 8px; }
+        #input-area-wrapper { padding: 12px 16px; background-color: var(--bg-color); display: flex; justify-content: center; flex-shrink: 0; }
+        #input-container { display: flex; align-items: center; background-color: var(--surface-color); border: 1px solid var(--border-color); border-radius: 24px; padding: 6px 12px; width: 100%; max-width: 800px; }
+        input[type="text"] { flex: 1; background: transparent; border: none; outline: none; color: var(--text-primary); font-size: 15px; padding: 6px; }
         input::placeholder { color: var(--text-secondary); }
-        button { background: var(--surface-hover); color: var(--text-primary); border: none; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s; }
-        button:hover { background: #3c4043; }
+        .send-btn { background: var(--surface-hover); color: var(--text-primary); border: none; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+
+        /* Settings Modal */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal.active { display: flex; }
+        .modal-content { background: var(--surface-color); border: 1px solid var(--border-color); width: 90%; max-width: 400px; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: bold; }
+        .setting-item { display: flex; flex-direction: column; gap: 6px; }
+        .setting-item label { font-size: 13px; color: var(--text-secondary); }
+        .setting-item select, .setting-item textarea { background: var(--bg-color); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px; border-radius: 8px; outline: none; font-family: inherit; }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
+        .modal-btn { background: var(--surface-hover); border: none; color: var(--text-primary); padding: 8px 16px; border-radius: 8px; cursor: pointer; }
+        .modal-btn.primary { background: #8ab4f8; color: #131314; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <header>
-        <div class="logo-container">✨ Zodiotac AI</div>
+        <div class="header-left">
+            <button class="icon-btn" onclick="toggleSidebar()">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+            </button>
+            <div class="logo-container">✨ Zodiotac AI</div>
+        </div>
+        <div class="header-right">
+            <button class="icon-btn" onclick="toggleSettings(true)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+            </button>
+        </div>
     </header>
 
-    <div id="chatbox">
-        <div class="message-row">
-            <div class="avatar ai-avatar">Z</div>
-            <div class="message ai-msg">Hello! I'm Zodiotac, powered by Llama 3. How can I help you today?</div>
+    <div class="app-container">
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+        <sidebar id="sidebar">
+            <div class="sidebar-header">
+                <h3>Recent Chats</h3>
+            </div>
+            <button class="new-chat-btn" onclick="startNewChat()">+ New Chat</button>
+            <div class="chat-list" id="chatList"></div>
+        </sidebar>
+
+        <div class="chat-main">
+            <div id="chatbox">
+                <div class="message-row">
+                    <div class="avatar ai-avatar">Z</div>
+                    <div class="message ai-msg">Hello! I'm Zodiotac, powered by Llama 3. How can I help you today?</div>
+                </div>
+            </div>
+
+            <div id="input-area-wrapper">
+                <div id="input-container">
+                    <input type="text" id="userInput" placeholder="Ask Zodiotac anything..." onkeypress="handleKeyPress(event)">
+                    <button class="send-btn" onclick="sendMessage()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div id="input-area-wrapper">
-        <div id="input-container">
-            <input type="text" id="userInput" placeholder="Ask Zodiotac anything..." onkeypress="handleKeyPress(event)">
-            <button onclick="sendMessage()">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-            </button>
+    <!-- Settings Modal -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>Settings</span>
+                <button class="icon-btn" onclick="toggleSettings(false)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+            </div>
+            <div class="setting-item">
+                <label>System Prompt Behavior</label>
+                <textarea id="systemPrompt" rows="3">You are Zodiotac, a smart, fluid, helpful, and concise AI assistant.</textarea>
+            </div>
+            <div class="setting-item">
+                <label>Data Management</label>
+                <button class="modal-btn" onclick="clearAllData()" style="background: #d93025; color: white;">Clear All Saved Chats</button>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn primary" onclick="saveSettings()">Save Changes</button>
+            </div>
         </div>
     </div>
 
     <script>
-        // These links remain identical every time because LocalTunnel locks your custom subdomain!
         const URL_SHIFT_1 = "https://zodiotac-primary-ai.loca.lt/chat";
-        const URL_SHIFT_2 = "https://zodiotac-backup-ai.loca.lt/chat";
+        const URL_SHIFT_2 = "https://...a.pinggy.link"; // Update with your actual second shift link if needed
+
+        let chats = JSON.parse(localStorage.getItem('zodiotac_chats')) || [{ id: Date.now(), title: 'New Chat', messages: [] }];
+        let currentChatId = chats[0].id;
+
+        function initApp() {
+            renderChatList();
+            loadCurrentChatMessages();
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('sidebarOverlay').classList.toggle('active');
+        }
+
+        function toggleSettings(show) {
+            document.getElementById('settingsModal').classList.toggle('active', show);
+        }
+
+        function saveSettings() {
+            toggleSettings(false);
+        }
+
+        function clearAllData() {
+            if (confirm("Are you sure you want to delete all saved chats from this device?")) {
+                localStorage.removeItem('zodiotac_chats');
+                chats = [{ id: Date.now(), title: 'New Chat', messages: [] }];
+                currentChatId = chats[0].id;
+                initApp();
+                toggleSettings(false);
+            }
+        }
+
+        function startNewChat() {
+            const newChat = { id: Date.now(), title: 'New Chat', messages: [] };
+            chats.unshift(newChat);
+            currentChatId = newChat.id;
+            saveChatsToDevice();
+            initApp();
+            toggleSidebar();
+        }
+
+        function saveChatsToDevice() {
+            localStorage.setItem('zodiotac_chats', JSON.stringify(chats));
+        }
+
+        function renderChatList() {
+            const listEl = document.getElementById('chatList');
+            listEl.innerHTML = '';
+            chats.forEach(chat => {
+                const item = document.createElement('div');
+                item.className = `chat-item ${chat.id === currentChatId ? 'active' : ''}`;
+                item.innerText = chat.title;
+                item.onclick = () => {
+                    currentChatId = chat.id;
+                    initApp();
+                    toggleSidebar();
+                };
+                listEl.appendChild(item);
+            });
+        }
+
+        function loadCurrentChatMessages() {
+            const chatbox = document.getElementById('chatbox');
+            chatbox.innerHTML = '';
+            const currentChat = chats.find(c => c.id === currentChatId);
+            
+            if (!currentChat || currentChat.messages.length === 0) {
+                addAIMessage("Hello! I'm Zodiotac how can i help you today?");
+                return;
+            }
+
+            currentChat.messages.forEach(msg => {
+                if (msg.role === 'user') {
+                    addUserMessage(msg.text, false);
+                } else {
+                    addAIMessage(msg.text, false);
+                }
+            });
+        }
 
         function handleKeyPress(e) {
             if (e.key === 'Enter') sendMessage();
@@ -95,7 +247,7 @@
             const message = input.value.trim();
             if (!message) return;
 
-            addUserMessage(message);
+            addUserMessage(message, true);
             input.value = '';
 
             const typingId = showThinkingState();
@@ -123,25 +275,45 @@
             }
 
             removeThinkingState(typingId);
-            addAIMessage(replyText);
+            addAIMessage(replyText, true);
         }
 
-        function addUserMessage(text) {
+        function addUserMessage(text, save = true) {
             const chatbox = document.getElementById('chatbox');
             const row = document.createElement('div');
             row.className = 'message-row user';
             row.innerHTML = `<div class="message user-msg">${escapeHtml(text)}</div>`;
             chatbox.appendChild(row);
             chatbox.scrollTop = chatbox.scrollHeight;
+
+            if (save) {
+                const currentChat = chats.find(c => c.id === currentChatId);
+                if (currentChat) {
+                    if (currentChat.title === 'New Chat') {
+                        currentChat.title = text.length > 25 ? text.substring(0, 25) + '...' : text;
+                    }
+                    currentChat.messages.push({ role: 'user', text });
+                    saveChatsToDevice();
+                    renderChatList();
+                }
+            }
         }
 
-        function addAIMessage(text) {
+        function addAIMessage(text, save = true) {
             const chatbox = document.getElementById('chatbox');
             const row = document.createElement('div');
             row.className = 'message-row';
             row.innerHTML = `<div class="avatar ai-avatar">Z</div><div class="message ai-msg">${escapeHtml(text)}</div>`;
             chatbox.appendChild(row);
             chatbox.scrollTop = chatbox.scrollHeight;
+
+            if (save) {
+                const currentChat = chats.find(c => c.id === currentChatId);
+                if (currentChat) {
+                    currentChat.messages.push({ role: 'assistant', text });
+                    saveChatsToDevice();
+                }
+            }
         }
 
         function showThinkingState() {
@@ -171,6 +343,9 @@
         function escapeHtml(text) {
             return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         }
+
+        // Initialize app on load
+        initApp();
     </script>
 </body>
 </html>
